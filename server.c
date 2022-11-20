@@ -13,33 +13,41 @@ int main()
 {
 
     printf("%s", encrypt("sula"));
-    printf("\n%ld", saltLen);
+    printf("\n%ld\n", saltLen);
     return EXIT_SUCCESS;
-
 }
 
 char *encrypt(char arr[])
 {
     char *retArray;
     retArray = malloc(strlen(arr) + saltLen + 1);
-    retArray[strlen(arr) + saltLen + 1] = 0;
+    retArray[strlen(arr) + saltLen + 1] = '\0';
     int length = strlen(arr);
     int hLength = length / 2;
+    int hSaltlen = saltLen / 2;
 
-    for (int i = 0; i < hLength + saltLen; i++)
+    for (int i = 0; i < saltLen / 2; i++)
     {
-        if(i>(saltLen-1)*2 || i%2==1)
-            retArray[hLength + saltLen - i - 1] = arr[i];
-        else
-            retArray[hLength + saltLen - i - 1] = SALT[i];
+        retArray[i] = SALT[i];
     }
 
-    for (int i = hLength + saltLen; i < length + saltLen; i++)
+    for (int i = 0; i < hLength; i++)
     {
-        retArray[length + saltLen - i - 1 + hLength] = arr[i];
+        retArray[hSaltlen + i] = arr[hLength - i - 1];
     }
 
-    for (int i = 0; i < strlen(retArray);i++){
+    for (int i = hLength; i < length; i++)
+    {
+        retArray[hSaltlen + i] = arr[length - i - 1 + hLength];
+    }
+
+    for (int i = hSaltlen; i < saltLen; i++)
+    {
+        retArray[i + length] = SALT[i];
+    }
+
+    for (int i = 0; i < strlen(retArray); i++)
+    {
         retArray[i] += i % 4;
     }
 
