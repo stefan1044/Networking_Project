@@ -2,5 +2,5 @@
 
 for i in *.c
 do
-    gcc -Wall "$i" -o "${i%.c}.out"
+    g++ -Wall "$i" -o "${i%.cpp}.out"
 done
