@@ -41,7 +41,7 @@ int serverSocketDescriptor;
 bool connectionUp = true;
 struct sockaddr_in server;
 
-int pingServer(long unsigned length, string temp);
+int pingServer(string temp);
 int receivePing(string& buffer);
 void sigpipeMask(int sig);
 
@@ -111,8 +111,7 @@ int main() {
     if (socketCount == 1) {
       // Conection is still up
       string temp = inputString.use();
-      long unsigned length = temp.length();
-      conStatus = pingServer(length, temp);
+      conStatus = pingServer(temp);
       if (conStatus == 0) {
         // cout << "DEBUG: Connection is still up!\n";
       }
@@ -125,7 +124,8 @@ int main() {
   return 0;
 }
 
-int pingServer(long unsigned length, string temp) {
+int pingServer(string temp) {
+  long unsigned length = temp.length();
   if (length > 0) {
     // cout << "DEBUG: Need to write: ";
 
@@ -139,7 +139,7 @@ int pingServer(long unsigned length, string temp) {
     str[length + 1] = '\0';
     // write(STDIN_FILENO, str, length + 1);
 
-    write(serverSocketDescriptor, str, length + 1);
+    write(serverSocketDescriptor, temp.c_str(), length + 1);
   } else if (write(serverSocketDescriptor, "0", 1) <= 0) {
     perror("Error when trying to send keepAlive!\n");
     return errno;

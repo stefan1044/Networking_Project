@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -21,16 +22,17 @@ struct sockaddr_in server;
 struct sockaddr_in from;
 
 const string operators[] = {"&&", "||", "2>", "1>", "|", ">", "<"};
+string outputString;
 
 int retStatus;
 
 int waitForClient();
-int pingClient();
+int pingClient(string temp);
 int receivePing(string& buffer);
-int getInput();
 void sigpipeMask(int sig);
 void processInput(string input);
 void processString(string input);
+string readReddir();
 
 int main() {
   signal(SIGPIPE, sigpipeMask);
@@ -76,7 +78,7 @@ int main() {
     socketCount =
         select(clientSocketDescriptor + 1, nullptr, &copySet, nullptr, &tv);
     if (socketCount == 1) {
-      conStatus = pingClient();
+      conStatus = pingClient(outputString);
       // Conection is still up
       if (conStatus == 0) {
         // cout << "DEBUG: Connection is still up!\n";
@@ -122,8 +124,12 @@ int waitForClient() {
 
   return 0;
 }
-int pingClient() {
-  if (write(clientSocketDescriptor, "0", 1) <= 0) {
+int pingClient(string temp) {
+  long unsigned length = temp.length();
+  if (length > 0) {
+    write(clientSocketDescriptor, temp.c_str(), length + 1);
+    temp = "";
+  } else if (write(clientSocketDescriptor, "0", 1) <= 0) {
     cout << "Error when trying to send keepAlive!\n";
     return errno;
   }
@@ -147,7 +153,7 @@ int receivePing(string& buffer) {
 
   return -1;  // FailSafe
 }
-int getInput() { return 0; }
+
 void sigpipeMask(int sig) {
   int retStatus;
   if ((retStatus = waitForClient())) {
@@ -155,6 +161,8 @@ void sigpipeMask(int sig) {
     cout << "Client connected!\n";
   }
 }
+
+// separtes commands by ; and passes each to processString to be run
 void processInput(string input) {
   // DEBUG:
   // write(STDIN_FILENO, input.c_str(), input.length() + 1);
@@ -171,18 +179,40 @@ void processInput(string input) {
   if (input.size() > 0) {
     vec.push_back(input);
   }
-  cout << "DEBUG: " << vec.size() << '\n';
+  // cout << "DEBUG: " << vec.size() << '\n';
   for (auto var : vec) {
-    write(STDIN_FILENO, var.c_str(), var.length() + 1);
-    write(STDIN_FILENO, "\n", 1);
+    // write(STDIN_FILENO, var.c_str(), var.length() + 1);
+    // write(STDIN_FILENO, "\n", 1);
     processString(var);
   }
-  cout << "DEBUG ended\n";
+  // cout << "DEBUG ended\n";
 }
-
 void processString(string input) {
-  write(STDIN_FILENO, input.c_str(), input.length() + 1);
-  write(STDIN_FILENO, "\n", 1);
+  // DEBUG
+  //  write(STDIN_FILENO, input.c_str(), input.length() + 1);
+  //  write(STDIN_FILENO, "\n", 1);
+  // DEBUG ended
+
+  string redirect(" > reddir.txt");
+  input += redirect;
   system(input.c_str());
+  string temp = readReddir();
+
+  outputString = temp;
+  // DEBUG
+  write(STDIN_FILENO, temp.c_str(), temp.length() + 1);
   write(STDIN_FILENO, "\n", 1);
+  // DEBUG ENDED
+}
+string readReddir() {
+  ifstream fin("reddir.txt");
+  string ret, temp;
+
+  while (getline(fin, temp)) {
+    ret += temp;
+    ret += '\n';
+  }
+
+  fin.close();
+  return ret;
 }
