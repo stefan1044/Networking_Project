@@ -2,5 +2,5 @@
 
 for i in *.cpp
 do
-    g++ -Wall "$i" -o "${i%.cpp}.out"
+    g++ -pthread -Wall "$i" -o "${i%.cpp}.out"
 done
