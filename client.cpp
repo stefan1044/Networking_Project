@@ -45,6 +45,9 @@ int pingServer(string temp);
 int receivePing(string& buffer);
 void sigpipeMask(int sig);
 
+string encrypt(string str);
+string decrypt(string str);
+
 int main() {
   signal(SIGPIPE, sigpipeMask);
 
@@ -139,8 +142,8 @@ int pingServer(string temp) {
     str[length + 1] = '\0';
     // write(STDIN_FILENO, str, length + 1);
 
-    write(serverSocketDescriptor, temp.c_str(), length + 1);
-  } else if (write(serverSocketDescriptor, "0", 1) <= 0) {
+    write(serverSocketDescriptor, encrypt(temp).c_str(), 4096);
+  } else if (write(serverSocketDescriptor, "0", 4096) <= 0) {
     perror("Error when trying to send keepAlive!\n");
     return errno;
   }
@@ -157,7 +160,8 @@ int receivePing(string& buffer) {
   if (buff[0] == '0') {
     return 5005;  // Pinged successfully!
   } else {
-    buffer = buff;
+    string temp(buff);
+    buffer = decrypt(temp);
     return 5006;  // Received input!
   }
 
@@ -166,4 +170,29 @@ int receivePing(string& buffer) {
 void sigpipeMask(int sig) {
   cout << "Server disconnected!\n";
   connectionUp = false;
+}
+
+string encrypt(string str) {
+  unsigned len = str.size();
+
+  string cstr = str;
+  for (unsigned i = 0; i < len - len % 2 - 1; i += 2) {
+    swap(cstr[i], cstr[i + 1]);
+    cstr[i] += 4;
+    cstr[i + 1] += 4;
+  }
+
+  return cstr;
+}
+string decrypt(string str) {
+  unsigned len = str.size();
+
+  string cstr = str;
+  for (unsigned i = 0; i < len - len % 2 - 1; i += 2) {
+    swap(cstr[i], cstr[i + 1]);
+    cstr[i] -= 4;
+    cstr[i + 1] -= 4;
+  }
+
+  return cstr;
 }
