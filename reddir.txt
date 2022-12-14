@@ -1,8 +1,10 @@
-README.md
-client.cpp
-client.out
-compile.sh
-database.txt
-reddir.txt
-server.cpp
-server.out
+total 352
+-rw-r--r-- 1 hara hara     17 Nov 27 14:06 README.md
+-rwxrwxrwx 1 hara hara   4463 Dec 14 13:52 client.cpp
+-rwxr-xr-x 1 hara hara  48248 Dec 14 15:19 client.out
+-rwxrwxrwx 1 hara hara     90 Nov 27 16:53 compile.sh
+-rwxrwxrwx 1 hara hara     11 Nov 27 14:06 database.txt
+-rwxrwxrwx 1 hara hara      0 Dec 14 15:41 reddir.txt
+-rwxr-xr-x 1 hara hara 194168 Dec 14 15:14 server
+-rwxrwxrwx 1 hara hara   6901 Dec 14 15:23 server.cpp
+-rwxr-xr-x 1 hara hara  56096 Dec 14 15:19 server.out
