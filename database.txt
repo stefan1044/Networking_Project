@@ -1,1 +1,4 @@
-admin: root
+admin root
+hara 123
+user pass
+a a

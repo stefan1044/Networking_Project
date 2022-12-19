@@ -60,6 +60,7 @@ int main() {
   server.sin_addr.s_addr = inet_addr("127.0.0.1");
   server.sin_port = htons(PORT);
 
+  // client setup
   if (connect(serverSocketDescriptor, (struct sockaddr*)&server,
               sizeof(struct sockaddr)) == -1) {
     perror("Error connecting.\n");
@@ -78,6 +79,7 @@ int main() {
   safeString inputString;
   string incomingString;
 
+  // Console thread
   auto writingThread = thread([&] {
     string input;
     while (connectionUp && getline(cin, input, '\n')) {
@@ -102,6 +104,9 @@ int main() {
       } else if (inputStatus == 5006) {
         cout << incomingString;
       } else {
+        // Error reading Ping
+        perror("Error receiving ping!");
+        exit(-1);
         return inputStatus;
       }
     }
@@ -115,8 +120,14 @@ int main() {
       // Conection is still up
       string temp = inputString.use();
       conStatus = pingServer(temp);
+
+      // write(STDIN_FILENO, "HERE\n", 5);
+
       if (conStatus == 0) {
         // cout << "DEBUG: Connection is still up!\n";
+      } else {
+        perror("Error sending ping!");
+        exit(-1);
       }
     }
 
@@ -134,12 +145,12 @@ int pingServer(string temp) {
 
     // Hack to write to stdin since cout is taken by the
     // other thread
-    char* str;
-    str = new char[length + 1];
-    for (long unsigned i = 0; i < length; i++) {
-      str[i] = temp[i];
-    }
-    str[length + 1] = '\0';
+    // char* str;
+    // str = new char[length + 1];
+    // for (long unsigned i = 0; i < length; i++) {
+    //   str[i] = temp[i];
+    // }
+    // str[length + 1] = '\0';
     // write(STDIN_FILENO, str, length + 1);
 
     write(serverSocketDescriptor, encrypt(temp).c_str(), 4096);
