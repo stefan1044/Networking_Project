@@ -105,6 +105,8 @@ int main() {
         cout << incomingString;
       } else {
         // Error reading Ping
+        write(STDOUT_FILENO, incomingString.c_str(),
+              incomingString.length() + 1);
         perror("Error receiving ping!");
         exit(-1);
         return inputStatus;
@@ -187,6 +189,12 @@ string encrypt(string str) {
   unsigned len = str.size();
 
   string cstr = str;
+
+  if (len == 1) {
+    cstr[0] += 4;
+    return cstr;
+  }
+
   for (unsigned i = 0; i < len - len % 2 - 1; i += 2) {
     swap(cstr[i], cstr[i + 1]);
     cstr[i] += 4;
@@ -199,6 +207,12 @@ string decrypt(string str) {
   unsigned len = str.size();
 
   string cstr = str;
+
+  if (len == 1) {
+    cstr[0] -= 4;
+    return cstr;
+  }
+
   for (unsigned i = 0; i < len - len % 2 - 1; i += 2) {
     swap(cstr[i], cstr[i + 1]);
     cstr[i] -= 4;
