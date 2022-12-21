@@ -1,0 +1,540 @@
+Read: a a
+Message from client: ls && pwd && grep a test
+ls 
+&&
+ pwd 
+&&
+ grep a test
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls 
+Status before operator && : 0
+Bytes Read: 194
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr6618
+stderr6906
+stderr7381
+stdin6618
+stdin6906
+stdin7381
+stdout6618
+stdout6906
+stdout7381
+temp
+test
+
+Executing command:  pwd 
+Status after operator: 0
+Executing command: rm pipefile
+Executing command:  pwd 
+Status before operator && : 0
+Bytes Read: 34
+Readoutput read: /home/hara/proiect/Proiect_Retele
+
+Executing command:  grep a test
+Status after operator: 0
+Executing command: rm pipefile
+Read: a a
+Message from client: ls || pwd || grep a test
+ls 
+||
+ pwd 
+|
+
+|
+ grep a test
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls 
+Status before operator || : 0
+Bytes Read: 226
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr6618
+stderr6906
+stderr7381
+stderr7772
+stdin6618
+stdin6906
+stdin7381
+stdin7772
+stdout6618
+stdout6906
+stdout7381
+stdout7772
+temp
+test
+
+Read: a a
+Message from client: ls && pwd && grep a test
+ls 
+&&
+ pwd 
+&&
+ grep a test
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls 
+Status before operator && : 0
+Bytes Read: 125
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr8057
+stdin8057
+stdout8057
+test
+
+Executing command:  pwd 
+Status after operator: 0
+Executing command: rm pipefile
+Executing command:  pwd 
+Status before operator && : 0
+Bytes Read: 34
+Readoutput read: /home/hara/proiect/Proiect_Retele
+
+Executing command:  grep a test
+Status after operator: 0
+Executing command: rm pipefile
+Executing command:  grep a test
+Bytes Read: 7
+Readoutput read: accept
+
+Error when receiving ping!Client Probably disconneted
+Client ran on PID 8057 closed
+
+Read: a a
+Message from client: ls | grep a | grep b
+ls 
+|
+ grep a 
+|
+ grep b
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: cat pipefile
+Ret status is 1
+Pipe exists? : 0
+Executing command: touch pipefile
+Executing command: chmod 777 pipefile
+Executing command: ls 
+Bytes Read: 166
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+pipefile
+server.cpp
+server.out
+stderr8057
+stderr8292
+stdin8057
+stdin8292
+stdout8057
+stdout8292
+test
+
+Return status of output redirection: 0
+Executing command: touch temp
+Executing command: chmod 777 temp
+Executing command: cat pipefile >temp
+Executing command:  grep a 
+Return status of input redirection: 0
+Bytes Read: 13
+Readoutput read: database.txt
+
+Executing command: cat pipefile
+Ret status is 0
+Pipe exists? : 1
+Executing command: touch temp
+Executing command: chmod 777 temp
+Executing command: cat pipefile >temp
+Executing command:  grep b
+Return status of input redirection: 0
+Bytes Read: 23
+Readoutput read: database.txt
+debug.txt
+
+Executing command:  grep b
+Bytes Read: 46
+Readoutput read: 
+Disconected!
+Error when trying to send keepAlive!
+Error when receiving ping!Client Probably disconneted
+Client ran on PID 8292 closed
+
+Read: a a
+Message from client: ls /asd 2> test
+ls /asd 
+2>
+ test
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls /asd 
+Bytes Read: 52
+ReadError read: ls: cannot access '/asd': No such file or directory
+
+Executing command: rm pipefile
+Executing command:  test
+Bytes Read: 0
+ReadError read: 
+Message from client: ls /asd 2> test 2> test2
+ls /asd 
+2>
+ test 2
+>
+ test2
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls /asd 
+Bytes Read: 52
+ReadError read: ls: cannot access '/asd': No such file or directory
+
+Executing command: rm pipefile
+Executing command:  test 2
+Bytes Read: 0
+Readoutput read: 
+Executing command: rm pipefile
+Executing command:  test2
+Bytes Read: 24
+ReadError read: sh: 1: test2: not found
+
+Error when receiving ping!Client Probably disconneted
+Client ran on PID 8539 closed
+
+Read: a a
+Read: a a
+Message from client: ls /asd 2> test 2> test2
+ls /asd 
+2>
+ test 
+2>
+ test2
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls /asd 
+Bytes Read: 52
+ReadError read: ls: cannot access '/asd': No such file or directory
+
+Executing command: rm pipefile
+Executing command:  test 
+Bytes Read: 0
+ReadError read: 
+Executing command: rm pipefile
+Executing command:  test2
+Bytes Read: 24
+ReadError read: sh: 1: test2: not found
+
+Read: a a
+Read: a a
+Message from client: ls
+ls
+Executing command: rm piepfile
+Executing command: ls
+0
+Bytes Read: 0
+Readoutput read: 
+Bytes Read: 0
+ReadError read: 
+Outputs is: 
+Read: a a
+Message from client: ls
+ls
+Executing command: rm piepfile
+Executing command: ls
+0
+Bytes Read: 193
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr10067
+stderr10546
+stderr10873
+stdin10067
+stdin10546
+stdin10873
+stdout10067
+stdout10546
+stdout10873
+
+Bytes Read: 0
+ReadError read: 
+Outputs is: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr10067
+stderr10546
+stderr10873
+stdin10067
+stdin10546
+stdin10873
+stdout10067
+stdout10546
+stdout10873
+
+Error when receiving ping!Client Probably disconneted
+Client ran on PID 10873 closed
+
+Read: a a
+Message from client: ls
+ls
+Executing command: rm piepfile
+Executing command: ls
+0
+Bytes Read: 228
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr10067
+stderr10546
+stderr10873
+stderr11208
+stdin10067
+stdin10546
+stdin10873
+stdin11208
+stdout10067
+stdout10546
+stdout10873
+stdout11208
+
+Bytes Read: 0
+ReadError read: 
+Outputs is: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr10067
+stderr10546
+stderr10873
+stderr11208
+stdin10067
+stdin10546
+stdin10873
+stdin11208
+stdout10067
+stdout10546
+stdout10873
+stdout11208
+
+Message from client: ls && pwd
+ls 
+&&
+ pwd
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls 
+Status before operator && : 0
+Bytes Read: 228
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr10067
+stderr10546
+stderr10873
+stderr11208
+stdin10067
+stdin10546
+stdin10873
+stdin11208
+stdout10067
+stdout10546
+stdout10873
+stdout11208
+
+Executing command:  pwd
+Status after operator: 0
+Executing command: rm pipefile
+Executing command:  pwd
+Bytes Read: 34
+Readoutput read: /home/hara/proiect/Proiect_Retele
+
+Message from client: ls /asd && pwd
+ls /asd 
+&&
+ pwd
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls /asd 
+Status before operator && : 2
+Bytes Read: 52
+ReadError read: ls: cannot access '/asd': No such file or directory
+
+Message from client: ls && ls /as
+ls 
+&&
+ ls /as
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls 
+Status before operator && : 0
+Bytes Read: 228
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr10067
+stderr10546
+stderr10873
+stderr11208
+stdin10067
+stdin10546
+stdin10873
+stdin11208
+stdout10067
+stdout10546
+stdout10873
+stdout11208
+
+Executing command:  ls /as
+Status after operator: 2
+Executing command: rm pipefile
+Executing command:  ls /as
+Bytes Read: 51
+ReadError read: ls: cannot access '/as': No such file or directory
+
+Message from client: ls || pwd
+ls 
+||
+ pwd
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls 
+Status before operator || : 0
+Bytes Read: 228
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+server.cpp
+server.out
+stderr10067
+stderr10546
+stderr10873
+stderr11208
+stdin10067
+stdin10546
+stdin10873
+stdin11208
+stdout10067
+stdout10546
+stdout10873
+stdout11208
+
+Message from client: ls /asd 2> test
+ls /asd 
+2>
+ test
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: ls /asd 
+Bytes Read: 52
+ReadError read: ls: cannot access '/asd': No such file or directory
+
+Executing command: rm pipefile
+Executing command:  test
+Bytes Read: 0
+ReadError read: 
+Message from client: ls | grep a
+ls 
+|
+ grep a
+Executing command: rm piepfile
+Executing command: rm pipefile
+Executing command: cat pipefile
+Ret status is 1
+Pipe exists? : 0
+Executing command: touch pipefile
+Executing command: chmod 777 pipefile
+Executing command: ls 
+Bytes Read: 242
+Readoutput read: README.md
+client.cpp
+client.out
+compile.sh
+database.txt
+debug.txt
+pipefile
+server.cpp
+server.out
+stderr10067
+stderr10546
+stderr10873
+stderr11208
+stdin10067
+stdin10546
+stdin10873
+stdin11208
+stdout10067
+stdout10546
+stdout10873
+stdout11208
+test
+
+Return status of output redirection: 0
+Executing command: touch temp
+Executing command: chmod 777 temp
+Executing command: cat pipefile >temp
+Executing command:  grep a
+Return status of input redirection: 0
+Bytes Read: 13
+Readoutput read: database.txt
+
+Executing command:  grep a
+Bytes Read: 26
+Readoutput read: 
+Disconected!
+Error when trying to send keepAlive!
+Error when receiving ping!Client Probably disconneted
+Client ran on PID 11208 closed
+

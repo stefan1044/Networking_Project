@@ -22,12 +22,13 @@ using namespace std;
 
 bool connectionUp = true;
 int serverSocketDescriptor, currentPid, debugDescriptor;
-int fileSocketDescriptors[3];
+int fileDescriptors[3];
 struct sockaddr_in server;
 struct sockaddr_in from;
 
 string operators[] = {"&&", "||", "2>", "1>", "|", ">", "<"};
 string outputString;
+string currentDirectory;
 
 int retStatus;
 
@@ -37,11 +38,14 @@ int receivePing(string& buffer, bool& loggedIn, int sd);
 void sigpipeMask(int sig);
 void processInput(string input);
 void processString(string input);
-string readReddir();
 string readOutput();
 string readError();
 vector<string> separateStringOnOperators(string input);
 int executeCommand(string command);
+int operatorErrReddir(string command, string fileName);
+int operatorOutputReddir(string command, string fileName);
+int operatorInputReddir(string command, string fileName);
+int operatorPipe(string command1, string command2);
 
 string encrypt(string str);
 string decrypt(string str);
@@ -71,6 +75,7 @@ int main() {
     return errno;
   }
 
+  // Server loop
   while (true) {
     int clientSocketDescriptor;
 
@@ -94,21 +99,26 @@ int main() {
         ;
       continue;
     } else if (pid == 0) {
+      // individual client fork
       close(serverSocketDescriptor);
+      char wd[200];
+      getcwd(wd, 200);
+      printf("Working directory: %s\n", wd);
+      currentDirectory = ""s + wd;
       currentPid = getpid();
       string inName = "stdin"s + to_string(currentPid);
       string outName = "stdout"s + to_string(currentPid);
       string errName = "stderr"s + to_string(currentPid);
 
-      fileSocketDescriptors[0] =
+      fileDescriptors[0] =
           open(inName.c_str(), O_RDWR | O_CREAT, S_IRWXO | S_IRWXG | S_IRWXU);
-      fileSocketDescriptors[1] =
+      fileDescriptors[1] =
           open(outName.c_str(), O_RDWR | O_CREAT, S_IRWXO | S_IRWXG | S_IRWXU);
-      fileSocketDescriptors[2] =
+      fileDescriptors[2] =
           open(errName.c_str(), O_RDWR | O_CREAT, S_IRWXO | S_IRWXG | S_IRWXU);
-      dup2(fileSocketDescriptors[0], STDIN_FILENO);
-      dup2(fileSocketDescriptors[1], STDOUT_FILENO);
-      dup2(fileSocketDescriptors[2], STDERR_FILENO);
+      dup2(fileDescriptors[0], STDIN_FILENO);
+      dup2(fileDescriptors[1], STDOUT_FILENO);
+      dup2(fileDescriptors[2], STDERR_FILENO);
 
       debugDescriptor = open("debug.txt", O_RDWR | O_APPEND | O_CREAT,
                              S_IRWXO | S_IRWXG | S_IRWXU);
@@ -123,7 +133,6 @@ int main() {
       bool loggedIn = false;
 
       while (connectionUp) {
-        // cout << "DEBUG: In while!\n";
         fd_set copySet = descriptorSet;
 
         // Can Write
@@ -133,7 +142,6 @@ int main() {
           conStatus = pingClient(outputString, clientSocketDescriptor);
           // Conection is still up
           if (conStatus == 0) {
-            // cout << "DEBUG: Connection is still up!\n";
           }
         }
         this_thread::sleep_for(chrono::milliseconds(200));
@@ -146,16 +154,17 @@ int main() {
         if (socketCount == 1) {
           inputStatus =
               receivePing(inputString, loggedIn, clientSocketDescriptor);
-          if (inputStatus == 5005) {  // pinged successfully
-          } else if (inputStatus == 5006) {
-            // cout << inputString;
+          if (inputStatus == 5005) {         // pinged successfully
+          } else if (inputStatus == 5006) {  // received command
             processInput(inputString);
-          } else if (inputStatus == 5007) {
+          } else if (inputStatus == 5007) {  // logged in
             loggedIn = true;
             outputString = "Successfully logged in!\n";
-          } else if (inputStatus == 5008) {
+          } else if (inputStatus == 5008) {  // logged out
             loggedIn = false;
             outputString = "Logged out!\n";
+          } else if (inputStatus == 5009) {  // sent message without login
+            outputString = "You need to login!\n";
           } else {
             // client probably disconted
             this_thread::sleep_for(chrono::milliseconds(100));
@@ -196,7 +205,6 @@ int pingClient(string& temp, int sd) {
   if (length > 0) {
     // has something to write
     write(sd, encrypt(temp).c_str(), 4096);
-    // write(STDOUT_FILENO, "DEBUG: Wrote", 13);
     temp = "";
   } else if (write(sd, "0", 4096) <= 0) {  // send keepalive
     connectionUp = false;
@@ -208,13 +216,14 @@ int pingClient(string& temp, int sd) {
 }
 int receivePing(string& buffer, bool& loggedIn, int sd) {
   char* buff = new char[4096];
-  if (read(sd, buff, 4096) <= 0) {
+  int nrRead = read(sd, buff, 4096);
+  if (nrRead <= 0) {
     connectionUp = false;
     writeDebug("Error when receiving ping!Client Probably disconneted"s);
     return errno;
   }
 
-  if (buff[0] == '0') {
+  if (buff[0] == '0' && ((""s + buff) == "0"s)) {
     return 5005;  // Pinged successfully!
   } else {
     string temp(buff);
@@ -222,27 +231,20 @@ int receivePing(string& buffer, bool& loggedIn, int sd) {
     // attempt to login
     if (loggedIn == false) {
       if (buffer.find("login "s) == 0) {
-        // printf("%s\n", buffer.substr(6).c_str());
-
         ifstream in("database.txt");
         char fileStr[128];
         string subString = buffer.substr(6);
-        // printf("SubStr: %s\n", subString.c_str());
         while (in.getline(fileStr, 128)) {
-          // printf("Read: %s\n", fileStr);
           if (subString == string(fileStr)) {
             writeDebug("Read: "s + (""s + fileStr));
+            in.close();
             return 5007;
           }
         }
-
         in.close();
       }
 
-      writeDebug("Message from client: "s + buffer);
-
-      buffer = "You need to be logged in!";
-      return 5005;
+      return 5009;
     }
 
     if (buffer == "logout"s) {
@@ -251,7 +253,6 @@ int receivePing(string& buffer, bool& loggedIn, int sd) {
     }
     writeDebug("Message from client: "s + buffer);
 
-    // write(STDOUT_FILENO, "DEBUG: Read", 11);
     return 5006;  // Received input!
   }
 
@@ -265,10 +266,6 @@ void sigpipeMask(int sig) {
 
 // separtes commands by ; and passes each to processString to be run
 void processInput(string input) {
-  // DEBUG:
-  // write(STDIN_FILENO, input.c_str(), input.length() + 1);
-  // cout << '\n';
-
   vector<string> vec;
   size_t pos = 0;
   string del(";");
@@ -282,45 +279,35 @@ void processInput(string input) {
   }
   // cout << "DEBUG: " << vec.size() << '\n';
   for (auto var : vec) {
-    // write(STDOUT_FILENO, var.c_str(), var.length() + 1);
-    // write(STDOUT_FILENO, "\n", 1);
     processString(var);
   }
   // cout << "DEBUG ended\n";
 }
+// Bulk of the work. Executes commands and operators
 void processString(string input) {
-  // DEBUG
-  // write(STDOUT_FILENO, input.c_str(), input.length() + 1);
-  // write(STDOUT_FILENO, "\n", 1);
-  // DEBUG ended
-
-  // string redirect(" > reddir.txt");
-  // input += redirect;
-  // system(input.c_str());
-
-  // printf("Here\n");
   // Clear contents of files
   fseek(stdin, 0, SEEK_SET);
-  ftruncate(fileSocketDescriptors[0], 0);
+  ftruncate(fileDescriptors[0], 0);
   fseek(stdout, 0, SEEK_SET);
-  ftruncate(fileSocketDescriptors[1], 0);
+  ftruncate(fileDescriptors[1], 0);
   fseek(stderr, 0, SEEK_SET);
-  ftruncate(fileSocketDescriptors[2], 0);
-  // Separate by ;
+  ftruncate(fileDescriptors[2], 0);
+  // Separate commands and operators
   vector<string> vec = separateStringOnOperators(input);
   int currentStatus = 0;
+
+  // sanitize pipe
+  executeCommand("rm piepfile");
+  fseek(stderr, 0, SEEK_SET);
+  ftruncate(fileDescriptors[2], 0);
 
   if (vec.size() == 1) {
     currentStatus = executeCommand(vec[0].c_str());
     writeDebug(to_string(currentStatus));
     if (currentStatus == 127 || currentStatus == -1 || currentStatus == -127) {
       outputString = "Could not execute command!\n";
-      // write(debugDescriptor, ("Here1"s + "\n"s).c_str(),
-      //       ("Here1"s + "\n"s).length() + 1);
       return;
     } else if (currentStatus >= 0) {
-      // write(debugDescriptor, ("Here2"s + "\n"s).c_str(),
-      //       ("Here2"s + "\n"s).length() + 1);
       string temp = readOutput();
       temp.append(""s + readError());
       outputString = temp;
@@ -330,7 +317,19 @@ void processString(string input) {
     return;
   }
 
-  for (unsigned i = 0; i < vec.size(); i += 3) {
+  string lastOutput, errStream, lastOp = "NULL"s;
+  // iterate over commands and operators
+  bool pipeLine = false;
+  for (unsigned i = 0; i < vec.size(); i += 2) {
+    if (pipeLine == true)
+      pipeLine = false;
+    else {
+      executeCommand("rm pipefile"s);
+      fseek(stdout, 0, SEEK_SET);
+      ftruncate(fileDescriptors[1], 0);
+      fseek(stderr, 0, SEEK_SET);
+      ftruncate(fileDescriptors[2], 0);
+    }
     string op;
 
     // Verify operator
@@ -339,63 +338,90 @@ void processString(string input) {
     } else
       op = vec[i + 1];
 
-    if (op == "&&"s) {
+    if (op == "NULL"s) {
+      int retStat;
+      retStat = executeCommand(vec[i]);
+
+      if (retStat == 0) {
+        outputString.append(readOutput());
+      } else {
+        outputString.append(readError());
+      }
+    } else if (op == "&&"s) {
       int retStat;
       retStat = executeCommand(vec[i]);
       writeDebug("Status before operator "s + op + " : "s + to_string(retStat));
-      if (retStat > 0) {
+      if (retStat == 0) {
         outputString.append(readOutput());
         retStat = executeCommand(vec[i + 2]);
         writeDebug("Status after operator: " + to_string(retStat));
-        if (retStat > 0) {
-          outputString.append(readOutput());
-          outputString.append(readError());
-        }
+        // if (retStat == 0) {
+        //   outputString.append(readOutput());
+        // } else {
+        //   outputString.append(readError());
+        // }
       } else {
         outputString.append(readError());
+        break;
       }
     } else if (op == "||"s) {
       int retStat;
       retStat = executeCommand(vec[i]);
       writeDebug("Status before operator "s + op + " : "s + to_string(retStat));
-      if (retStat >= 0) {
+      if (retStat == 0) {
         outputString.append(readOutput());
+        break;
       } else {
+        //   outputString.append(readError());
+        //   retStat = executeCommand(vec[i + 2]);
+        //   writeDebug("Status after operator: " + to_string(retStat));
+        //   if (retStat == 0) {
+        //     outputString.append(readOutput());
+        //   }
+        // else {
         outputString.append(readError());
-        retStat = executeCommand(vec[i + 2]);
-        writeDebug("Status after operator: " + to_string(retStat));
-        if (retStat > 0) {
-          outputString.append(readOutput());
-        } else {
-          outputString.append(readError());
-        }
+        //}
       }
     } else if (op == "2>"s) {
+      int retStat;
+      retStat = operatorErrReddir(vec[i], vec[i + 2]);
+
+      if (retStat == -1) writeDebug("Error opening the file!"s);
     } else if (op == "1>"s) {
+      int retStat;
+      retStat = operatorOutputReddir(vec[i], vec[i + 2]);
+
+      if (retStat == -1) writeDebug("Error opening the file!"s);
     } else if (op == "|"s) {
+      int retStat;
+      retStat = operatorPipe(vec[i], vec[i + 2]);
+
+      if (retStat != 0) {
+        outputString = readError();
+      } else {
+        pipeLine = true;
+        outputString = readOutput();
+      }
     } else if (op == ">"s) {
+      int retStat;
+      retStat = operatorOutputReddir(vec[i], vec[i + 2]);
+
+      if (retStat == -1) writeDebug("Error opening the file!"s);
     } else if (op == "<"s) {
+      int retStat;
+      retStat = operatorInputReddir(vec[i], vec[i + 2]);
+
+      writeDebug("RetStat is: "s + to_string(retStat));
+      if (retStat == -1)
+        writeDebug("Error opening the file!"s);
+      else {
+        outputString = readOutput();
+      }
     } else {
       // Unknown Operator
     }
+    lastOutput = outputString;
   }
-
-  // DEBUG
-  // write(STDOUT_FILENO, temp.c_str(), temp.length() + 1);
-  // write(STDOUT_FILENO, "\n", 1);
-  // DEBUG ENDED
-}
-string readReddir() {
-  ifstream fin("reddir.txt");
-  string ret, temp;
-
-  while (getline(fin, temp)) {
-    ret += temp;
-    ret += '\n';
-  }
-
-  fin.close();
-  return ret;
 }
 string readOutput() {
   char buff[4096];
@@ -409,7 +435,7 @@ string readOutput() {
     writeDebug("Readoutput read: "s + buff);
   }
 
-  ftruncate(fileSocketDescriptors[1], 0);
+  ftruncate(fileDescriptors[1], 0);
 
   return (""s + buff);
 }
@@ -418,14 +444,14 @@ string readError() {
   bzero(buff, 4096);
   int nrRead = 0;
   fseek(stderr, 0, SEEK_SET);
-  if ((nrRead = read(fileSocketDescriptors[2], buff, 4095)) < 0) {
+  if ((nrRead = read(fileDescriptors[2], buff, 4095)) < 0) {
     writeDebug("Error reading from stderr!"s);
   } else {
     writeDebug("Bytes Read: "s + to_string(nrRead));
     writeDebug("ReadError read: "s + buff);
   }
 
-  ftruncate(fileSocketDescriptors[2], 0);
+  ftruncate(fileDescriptors[2], 0);
 
   return (""s + buff);
 }
@@ -440,13 +466,6 @@ vector<string> separateStringOnOperators(string input) {
     for (auto op : operators) {
       pos = input.find(op);
 
-      // DEBUG
-      //  write(STDOUT_FILENO, op.c_str(), op.length() + 1);
-      //  write(STDOUT_FILENO, "\n\0", 2);
-      //  printf("Pos is %ld\n", pos);
-      //  write(STDOUT_FILENO, "\n\0", 2);
-      // END DEBUG
-
       if (pos == string::npos) {
         continue;
       } else {
@@ -455,6 +474,7 @@ vector<string> separateStringOnOperators(string input) {
       vec.push_back(input.substr(0, pos));
       vec.push_back(op);
       input.erase(0, pos + op.length());
+      break;
     }
     if (finishedOps == true) ok = false;
   }
@@ -473,26 +493,21 @@ vector<string> separateStringOnOperators(string input) {
 
 int executeCommand(string command) {
   int retStat = -1;
+  fseek(stdin, 0, SEEK_SET);
+  writeDebug("Executing command: "s + command);
 
+  command = "cd " + currentDirectory + " && " + command;
   retStat = WEXITSTATUS(system(command.c_str()));
 
-  // int pid;
-
-  // if ((pid = fork()) == -1) {
-  //   perror("Error when forking for command");
-  //   exit(0);
-  // }
-
-  // if (pid == 0) {
-  // } else {
-  //   exit(0);
-  // }
-
   // Success
-  if (retStat >= 0) {
+  if (retStat == 0) {
     // get from reddir
 
-    return 1;
+    return retStat;
+  }
+  // Command Error
+  else if (retStat > 0) {
+    return retStat;
   }
   // System fork error
   else if (retStat == -1) {
@@ -506,6 +521,135 @@ int executeCommand(string command) {
   else {
     return -127;
   }
+}
+
+int operatorErrReddir(string command, string fileName) {
+  int retStat = -1;
+  retStat = executeCommand(command);
+
+  string err = readError();
+  int startPos = fileName.find_first_not_of(' ');
+  int lastPos = fileName.find_last_not_of(' ');
+  fileName = fileName.substr(startPos, lastPos - startPos + 1);
+
+  int fd =
+      open(fileName.c_str(), O_RDWR | O_CREAT, S_IRWXO | S_IRWXG | S_IRWXU);
+  if (fd < 0) {
+    writeDebug("Error opening file!"s);
+    close(fd);
+    return -1;
+  } else {
+    write(fd, err.c_str(), err.length() + 1);
+  }
+
+  close(fd);
+  return retStat;
+}
+int operatorOutputReddir(string command, string fileName) {
+  int retStat = -1;
+  retStat = executeCommand(command);
+
+  string output = readOutput();
+  int startPos = fileName.find_first_not_of(' ');
+  int lastPos = fileName.find_last_not_of(' ');
+  fileName = fileName.substr(startPos, lastPos - startPos + 1);
+
+  int fd =
+      open(fileName.c_str(), O_RDWR | O_CREAT, S_IRWXO | S_IRWXG | S_IRWXU);
+  if (fd < 0) {
+    writeDebug("Error opening file!"s);
+    close(fd);
+    return -1;
+  } else {
+    write(fd, output.c_str(), output.length() + 1);
+  }
+
+  close(fd);
+  return retStat;
+}
+int operatorInputReddir(string command, string fileName) {
+  int retStat = -1;
+
+  int startPos = fileName.find_first_not_of(' ');
+  int lastPos = fileName.find_last_not_of(' ');
+  fileName = fileName.substr(startPos, lastPos - startPos + 1);
+  executeCommand("touch temp");
+  executeCommand("chmod 777 temp");
+  int fd = open("temp", O_RDWR, S_IRWXO | S_IRWXG | S_IRWXU);
+  if (fd < 0) {
+    writeDebug("Error opening file!"s);
+    close(fd);
+    executeCommand("rm temp");
+    return -1;
+  }
+  executeCommand("cat "s + fileName + " >temp"s);
+
+  char buff[8192];
+  int nrRead = read(fd, buff, 8191);
+
+  if (nrRead < 0) {
+    writeDebug("Error reading from file!"s);
+    close(fd);
+    executeCommand("rm temp");
+    return -1;
+  }
+  write(fileDescriptors[0], buff, strlen(buff));
+
+  close(fd);
+  // executeCommand("rm temp");
+  retStat = executeCommand(command);
+
+  return retStat;
+}
+int operatorPipe(string command1, string command2) {
+  int retStat;
+  bool pipeExist = false;
+  ftruncate(fileDescriptors[2], 0);
+
+  // Check if pipealready exists
+  retStat = executeCommand("cat pipefile"s);
+  writeDebug("Ret status is " + to_string(retStat));
+  if (retStat == 0) pipeExist = true;
+  writeDebug("Pipe exists? : "s + to_string(pipeExist));
+
+  // Sanitize after commands
+  fseek(stdout, 0, SEEK_SET);
+  ftruncate(fileDescriptors[1], 0);
+  fseek(stderr, 0, SEEK_SET);
+  ftruncate(fileDescriptors[2], 0);
+
+  if (pipeExist == false) {
+    executeCommand("touch pipefile");
+    executeCommand("chmod 777 pipefile");
+
+    retStat = operatorOutputReddir(command1, "pipefile"s);
+    writeDebug("Return status of output redirection: " + to_string(retStat));
+
+    if (retStat != 0) {
+      writeDebug("Returned before pipe"s);
+      executeCommand("rm pipefile");
+      return retStat;
+    }
+
+    fseek(stdout, 0, SEEK_SET);
+    ftruncate(fileDescriptors[1], 0);
+  }
+
+  auto fp = fopen("pipefile", "r");
+  fseek(fp, 0, SEEK_SET);
+
+  retStat = operatorInputReddir(command2, "pipefile"s);
+  writeDebug("Return status of input redirection: " + to_string(retStat));
+
+  if (retStat != 0) {
+    writeDebug("Returned after pipe"s);
+    executeCommand("rm pipefile");
+    return retStat;
+  }
+
+  // executeCommand("rm pipefile");
+
+  return retStat;
 }
 
 string encrypt(string str) {
