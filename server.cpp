@@ -46,6 +46,7 @@ int operatorErrReddir(string command, string fileName);
 int operatorOutputReddir(string command, string fileName);
 int operatorInputReddir(string command, string fileName);
 int operatorPipe(string command1, string command2);
+string changeDirectory(string directory);
 
 string encrypt(string str);
 string decrypt(string str);
@@ -165,6 +166,8 @@ int main() {
             outputString = "Logged out!\n";
           } else if (inputStatus == 5009) {  // sent message without login
             outputString = "You need to login!\n";
+          } else if (inputStatus == 5010) {  // changed directory
+            outputString = changeDirectory(inputString);
           } else {
             // client probably disconted
             this_thread::sleep_for(chrono::milliseconds(100));
@@ -251,6 +254,9 @@ int receivePing(string& buffer, bool& loggedIn, int sd) {
       buffer = "";
       return 5008;
     }
+    if (buffer[0] == 'c' && buffer[1] == 'd') {
+      return 5010;
+    }
     writeDebug("Message from client: "s + buffer);
 
     return 5006;  // Received input!
@@ -297,7 +303,7 @@ void processString(string input) {
   int currentStatus = 0;
 
   // sanitize pipe
-  executeCommand("rm piepfile");
+  executeCommand("rm pipefile");
   fseek(stderr, 0, SEEK_SET);
   ftruncate(fileDescriptors[2], 0);
 
@@ -635,7 +641,7 @@ int operatorPipe(string command1, string command2) {
     ftruncate(fileDescriptors[1], 0);
   }
 
-  auto fp = fopen("pipefile", "r");
+  auto fp = fopen((currentDirectory + "/pipefile"s).c_str(), "r");
   fseek(fp, 0, SEEK_SET);
 
   retStat = operatorInputReddir(command2, "pipefile"s);
@@ -650,6 +656,38 @@ int operatorPipe(string command1, string command2) {
   // executeCommand("rm pipefile");
 
   return retStat;
+}
+
+string changeDirectory(string directory) {
+  directory = directory.substr(2);
+  int startPos = directory.find_first_not_of(' ');
+  int lastPos = directory.find_last_not_of(' ');
+  directory = directory.substr(startPos, lastPos - startPos + 1);
+
+  writeDebug("Tried moving to directory: "s + directory);
+
+  if (directory == ".."s) {
+    size_t pos = currentDirectory.find_last_of('/');
+    if (pos != string::npos) {
+      currentDirectory = currentDirectory.substr(0, pos);
+      return "Successfully changed directory\n"s;
+    } else
+      return "Could not change directory\n"s;
+  } else {
+    int retStat = executeCommand("cd " + directory);
+    writeDebug("Retstat of cd is: "s + to_string(retStat));
+    if (retStat == 0) {
+      currentDirectory += "/"s + directory;
+      return "Successfully changed directory\n"s;
+
+    } else {
+      return "Could not change directory\n"s;
+    }
+  }
+
+  writeDebug("Current directory is: "s + currentDirectory);
+
+  return "";
 }
 
 string encrypt(string str) {
